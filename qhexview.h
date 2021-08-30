@@ -95,6 +95,7 @@ public Q_SLOTS:
 	void setShowAsciiDump(bool);
 	void setShowComments(bool);
 	void setShowHexDump(bool);
+	void setShowPointers(bool);
 	void setUserConfigRowWidth(bool);
 	void setUserConfigWordWidth(bool);
 	void setWordWidth(int);
@@ -115,6 +116,7 @@ public:
 	bool showAsciiDump() const;
 	bool showComments() const;
 	bool showHexDump() const;
+	bool showPointers() const;
 	bool userConfigRowWidth() const;
 	bool userConfigWordWidth() const;
 	bool hideLeadingAddressZeros() const;
@@ -149,9 +151,11 @@ private:
 	int charsPerWord() const;
 	int commentLeft() const;
 	int hexDumpLeft() const;
+	int pointersLeft() const;
 	int line1() const;
 	int line2() const;
 	int line3() const;
+	int line4() const;
 	int64_t dataSize() const;
 	int64_t normalizedOffset() const;
 	int64_t pixelToWord(int x, int y) const;
@@ -161,6 +165,8 @@ private:
 	void drawCommentsToBuffer(QTextStream &stream, int64_t offset, int64_t size) const;
 	void drawHexDump(QPainter &painter, int64_t offset, int row, int64_t size, int *word_count, const QByteArray &row_data) const;
 	void drawHexDumpToBuffer(QTextStream &stream, int64_t offset, int64_t size, const QByteArray &row_data) const;
+	/*void drawPointers(QPainter &painter, int64_t offset, int row, int64_t size) const;
+	void drawPointersToBuffer(QTextStream &stream, int64_t offset, int64_t size) const;*/
 	void ensureVisible(int64_t index);
 	void updateScrollbars();
 	void updateToolTip();
@@ -180,9 +186,11 @@ private:
 	bool showAscii_               = true; // should we show the ascii display?
 	bool showComments_            = true;
 	bool showHex_                 = true; // should we show the hex display?
+	bool showPointers_            = true;
 	bool showLine1_               = true;
 	bool showLine2_               = true;
 	bool showLine3_               = true;
+	bool showLine4_               = true;
 	bool userCanSetRowWidth_      = true;
 	bool userCanSetWordWidth_     = true;
 	bool hideLeadingAddressZeros_ = false;

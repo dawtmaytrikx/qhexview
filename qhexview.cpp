@@ -223,6 +223,10 @@ QMenu *QHexView::createStandardContextMenu() {
 	add_toggle_action_to_menu(menu, tr("Show A&ddress"), showAddress_, [this](bool value) {
 		setShowAddress(value);
 	});
+	
+	add_toggle_action_to_menu(menu, tr("Show &Pointers"), showPointers_, [this](bool value) {
+		setShowPointers(value);
+	});
 
 	add_toggle_action_to_menu(menu, tr("Show &Hex"), showHex_, [this](bool value) {
 		setShowHexDump(value);
@@ -355,6 +359,10 @@ void QHexView::mnuCopy() {
 						const QString addressBuffer = formatAddress(address_rva);
 						ss << addressBuffer << '|';
 					}
+					
+					/*if (showPointers_) {
+						drawPointersToBuffer(ss, offset, data_size);
+					}*/
 
 					if (showHex_) {
 						drawHexDumpToBuffer(ss, offset, data_size, row_data);
@@ -511,13 +519,26 @@ void QHexView::keyPressEvent(QKeyEvent *event) {
 }
 
 /**
- * @brief QHexView::line3
- * @return the x coordinate of the 3rd line
+ * @brief QHexView::line4
+ * @return the x coordinate of the 4th line
  */
-int QHexView::line3() const {
+int QHexView::line4() const {
 	if (showAscii_) {
 		const int elements = bytesPerRow();
 		return asciiDumpLeft() + (elements * fontWidth_) + (fontWidth_ / 2);
+	} else {
+		return line3();
+	}
+}
+
+/**
+ * @brief QHexView::line3
+ * @return the x coordinate of the 3nd line
+ */
+int QHexView::line3() const {
+	if (showHex_) {
+		const int elements = rowWidth_ * (charsPerWord() + 1) - 1;
+		return hexDumpLeft() + (elements * fontWidth_) + (fontWidth_ / 2);
 	} else {
 		return line2();
 	}
@@ -528,9 +549,9 @@ int QHexView::line3() const {
  * @return the x coordinate of the 2nd line
  */
 int QHexView::line2() const {
-	if (showHex_) {
-		const int elements = rowWidth_ * (charsPerWord() + 1) - 1;
-		return hexDumpLeft() + (elements * fontWidth_) + (fontWidth_ / 2);
+	if (showPointers_) {
+		const int elements = bytesPerRow();
+		return pointersLeft() + (elements * fontWidth_) + (fontWidth_ / 2);
 	} else {
 		return line1();
 	}
@@ -550,11 +571,19 @@ int QHexView::line1() const {
 }
 
 /**
+ * @brief QHexView::pointersLeft
+ * @return the x coordinate of the pointers field left edge
+ */
+int QHexView::pointersLeft() const {
+	return line1() + (fontWidth_ / 2);
+}
+
+/**
  * @brief QHexView::hexDumpLeft
  * @return the x coordinate of the hex-dump field left edge
  */
 int QHexView::hexDumpLeft() const {
-	return line1() + (fontWidth_ / 2);
+	return line2() + (fontWidth_ / 2);
 }
 
 /**
@@ -562,7 +591,7 @@ int QHexView::hexDumpLeft() const {
  * @return the x coordinate of the ascii-dump field left edge
  */
 int QHexView::asciiDumpLeft() const {
-	return line2() + (fontWidth_ / 2);
+	return line3() + (fontWidth_ / 2);
 }
 
 /**
@@ -570,7 +599,7 @@ int QHexView::asciiDumpLeft() const {
  * @return the x coordinate of the comment field left edge
  */
 int QHexView::commentLeft() const {
-	return line3() + (fontWidth_ / 2);
+	return line4() + (fontWidth_ / 2);
 }
 
 /**
@@ -606,7 +635,7 @@ void QHexView::updateScrollbars() {
 	const int maxval = sz / bpr + ((sz % bpr) ? 1 : 0) - viewport()->height() / fontHeight_;
 
 	verticalScrollBar()->setMaximum(std::max(0, maxval));
-	horizontalScrollBar()->setMaximum(std::max(0, ((line3() - viewport()->width()) / fontWidth_)));
+	horizontalScrollBar()->setMaximum(std::max(0, ((line4() - viewport()->width()) / fontWidth_)));
 }
 
 /**
@@ -639,6 +668,18 @@ void QHexView::scrollTo(address_t offset) {
  */
 void QHexView::setShowAddress(bool show) {
 	showAddress_ = show;
+	updateScrollbars();
+	viewport()->update();
+}
+
+/**
+ * sets if we are to display the pointerss column
+ *
+ * @brief QHexView::setShowPointers
+ * @param show
+ */
+void QHexView::setShowPointers(bool show) {
+	showPointers_ = show;
 	updateScrollbars();
 	viewport()->update();
 }
@@ -730,10 +771,10 @@ int64_t QHexView::pixelToWord(int x, int y) const {
 #endif
 		// the right edge of a box is kinda quirky, so we pretend there is one
 		// extra character there
-		x = qBound(line1(), x, static_cast<int>(line2() + fontWidth_));
+		x = qBound(line2(), x, static_cast<int>(line3() + fontWidth_));
 
 		// the selection is in the data view portion
-		x -= line1();
+		x -= line2();
 
 		// scale x/y down to character from pixels
 		x = x / fontWidth_ + (fmod(x, fontWidth_) >= fontWidth_ / 2 ? 1 : 0);
@@ -743,7 +784,7 @@ int64_t QHexView::pixelToWord(int x, int y) const {
 		x /= (charsPerWord() + 1);
 		break;
 	case Highlighting::Ascii:
-		x = qBound(asciiDumpLeft(), x, line3());
+		x = qBound(asciiDumpLeft(), x, line4());
 
 		// the selection is in the ascii view portion
 		x -= asciiDumpLeft();
@@ -1362,6 +1403,10 @@ void QHexView::paintEvent(QPaintEvent *event) {
 				painter.drawText(0, row, addressBuffer.length() * fontWidth_, fontHeight_, Qt::AlignTop, addressBuffer);
 			}
 
+			/*if (showPointers_) {
+				drawPointers(painter, offset, row, data_size);
+			}*/
+
 			if (showHex_) {
 				drawHexDump(painter, offset, row, data_size, &word_count, row_data);
 			}
@@ -1385,15 +1430,20 @@ void QHexView::paintEvent(QPaintEvent *event) {
 		const int vertline1_x = line1();
 		painter.drawLine(vertline1_x, 0, vertline1_x, widget_height);
 	}
-
-	if (showHex_ && showLine2_) {
+	
+	if (showPointers_ && showLine2_) {
 		const int vertline2_x = line2();
 		painter.drawLine(vertline2_x, 0, vertline2_x, widget_height);
 	}
 
-	if (showAscii_ && showLine3_) {
+	if (showHex_ && showLine3_) {
 		const int vertline3_x = line3();
 		painter.drawLine(vertline3_x, 0, vertline3_x, widget_height);
+	}
+
+	if (showAscii_ && showLine4_) {
+		const int vertline4_x = line4();
+		painter.drawLine(vertline4_x, 0, vertline4_x, widget_height);
 	}
 }
 
@@ -1472,19 +1522,27 @@ auto QHexView::addressOffset() const -> address_t {
 }
 
 /**
- * @brief QHexView::showHexDump
- * @return
- */
-bool QHexView::showHexDump() const {
-	return showHex_;
-}
-
-/**
  * @brief QHexView::showAddress
  * @return
  */
 bool QHexView::showAddress() const {
 	return showAddress_;
+}
+
+/**
+ * @brief QHexView::showPointers
+ * @return
+ */
+bool QHexView::showPointers() const {
+	return showPointers_;
+}
+
+/**
+ * @brief QHexView::showHexDump
+ * @return
+ */
+bool QHexView::showHexDump() const {
+	return showHex_;
 }
 
 /**
