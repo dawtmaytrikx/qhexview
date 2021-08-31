@@ -223,10 +223,11 @@ QMenu *QHexView::createStandardContextMenu() {
 	add_toggle_action_to_menu(menu, tr("Show A&ddress"), showAddress_, [this](bool value) {
 		setShowAddress(value);
 	});
-	
-	add_toggle_action_to_menu(menu, tr("Show &Pointers"), showPointers_, [this](bool value) {
-		setShowPointers(value);
-	});
+	if (showPointers_) {
+		add_toggle_action_to_menu(menu, tr("Show &Pointers"), showPointers_, [this](bool value) {
+			setShowPointers(value);
+		});
+	}
 
 	add_toggle_action_to_menu(menu, tr("Show &Hex"), showHex_, [this](bool value) {
 		setShowHexDump(value);
